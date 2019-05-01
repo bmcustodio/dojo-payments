@@ -1,5 +1,21 @@
 # dojo-payments
 
+## Testing
+
+In order to run the end-to-end test suite, you may run
+
+```shell
+$ make test.e2e
+```
+
+In case the API server is not serving requests at `http://localhost:8080`, you must instead run
+
+```shell
+$ make test.e2e BASE_URL="http://<host>:<port>"
+```
+
+replacing `<host>` and `<port>` with the host and port where the API server can be reached.
+
 ## License
 
 Copyright 2019 Bruno Miguel Custodio
