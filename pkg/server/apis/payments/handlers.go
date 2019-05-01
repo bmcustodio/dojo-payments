@@ -93,5 +93,24 @@ func listPayments(ctx echo.Context) error {
 
 // updatePayment updates a payment by ID.
 func updatePayment(ctx echo.Context) error {
-	return ctx.String(http.StatusNotImplemented, "")
+	var (
+		err error
+		p   models.Payment
+		r   models.Payment
+	)
+	// Grab the Payment object details from the request's body and validate it.
+	if err := ctx.Bind(&p); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	if err := p.Validate(); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	r, err = ctx.Get(constants.DatabaseContextKey).(db.Database).Payments().UpdatePayment(ctx.Param("id"), p)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	if p == (models.Payment{}) {
+		return echo.NewHTTPError(http.StatusNotFound, "payment not found")
+	}
+	return ctx.JSON(http.StatusOK, r)
 }

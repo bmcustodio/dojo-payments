@@ -21,6 +21,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/bmcstdio/dojo-payments/pkg/constants"
 	"github.com/bmcstdio/dojo-payments/pkg/db/models"
@@ -36,6 +37,8 @@ type PaymentsDatabase interface {
 	GetPayment(string) (models.Payment, error)
 	// ListPayments lists all registered payments.
 	ListPayments() ([]models.Payment, error)
+	// UpdatePayment updates the payment with the specified ID.
+	UpdatePayment(string, models.Payment) (models.Payment, error)
 }
 
 // mongodbPaymentsDatabase is an implementation of PaymentsDatabase powered by MongoDB.
@@ -123,7 +126,7 @@ func (db *mongodbPaymentsDatabase) GetPayment(id string) (models.Payment, error)
 
 // ListPayments lists all registered payments.
 func (db *mongodbPaymentsDatabase) ListPayments() ([]models.Payment, error) {
-	// Try to retrieving all registered payments, excluding deleted ones.
+	// Try to retrieve all registered payments, excluding deleted ones.
 	ctx, fn := context.WithTimeout(context.Background(), constants.MongoDBOperationTimeout)
 	defer fn()
 	c, err := db.c.Find(ctx, primitive.M{
@@ -148,4 +151,43 @@ func (db *mongodbPaymentsDatabase) ListPayments() ([]models.Payment, error) {
 		return nil, fmt.Errorf("failed to list payments: %v", err)
 	}
 	return r, nil
+}
+
+// UpdatePayment updates the payment with the specified ID.
+func (db *mongodbPaymentsDatabase) UpdatePayment(id string, p models.Payment) (models.Payment, error) {
+	// Grab the current timestamp so we can set the modification date.
+	now := time.Now()
+	// Grab the ObjectID that corresponds to the provided ID.
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return models.Payment{}, fmt.Errorf("%q is not a valid payment ID", id)
+	}
+	// Force-overwrite the payment's ID so that it is not possibly changed during the update.
+	p.ID = objectID
+	// Set the payment's modification date.
+	p.UpdatedAt = now
+	// Try to update the payment with the specified ID, requesting for the new (updated) document to be returned.
+	opts := &options.FindOneAndReplaceOptions{}
+	opts.SetReturnDocument(options.After)
+	ctx, fn := context.WithTimeout(context.Background(), constants.MongoDBOperationTimeout)
+	defer fn()
+	r := db.c.FindOneAndReplace(ctx, primitive.M{
+		"_id": objectID,
+		"deleted_at": primitive.M{
+			"$eq": nil,
+		},
+	}, p, opts)
+	if r.Err() != nil {
+		return models.Payment{}, fmt.Errorf("failed to update payment: %v", r.Err())
+	}
+	// Check whether a payment with the provided ID was found, and return it if it does.
+	res := models.Payment{}
+	if err := r.Decode(&res); err != nil {
+		if err != mongo.ErrNoDocuments {
+			return models.Payment{}, fmt.Errorf("failed to update payment: %v", r.Err())
+		}
+		// The payment was not found, so we just return an empty payment (and error).
+		return models.Payment{}, nil
+	}
+	return res, nil
 }

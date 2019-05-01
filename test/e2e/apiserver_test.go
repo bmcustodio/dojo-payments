@@ -280,6 +280,23 @@ var _ = Describe("API Server", func() {
 					paymentIDFieldName: Equal(payment2.ID),
 				})))
 			})
+
+			It("can update a payment by its ID", func() {
+				// Grab the original ID of the first payment so that we can check that IDs cannot be overwritten.
+				originalID := payment1.ID.Hex()
+				// Change some of the fields of the first payment, including its ID.
+				payment1.Amount = 1200.41
+				payment1.ID = payment2.ID
+				// Update the first payment and make sure that only the ".amount" field was updated.
+				res, err := request.Put(baseUrl+payments.BasePath+"/"+originalID, request.BodyJSON(payment1))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res.Response().StatusCode).To(Equal(http.StatusOK))
+				updatedPayment := models.Payment{}
+				err = res.ToJSON(&updatedPayment)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(updatedPayment.Amount).To(Equal(payment1.Amount))
+				Expect(updatedPayment.ID.Hex()).To(Equal(originalID))
+			})
 		})
 	})
 })
