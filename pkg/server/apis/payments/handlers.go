@@ -19,6 +19,8 @@ import (
 
 	"github.com/labstack/echo"
 
+	"github.com/bmcstdio/dojo-payments/pkg/constants"
+	"github.com/bmcstdio/dojo-payments/pkg/db"
 	"github.com/bmcstdio/dojo-payments/pkg/db/models"
 )
 
@@ -38,15 +40,22 @@ func Register(echo *echo.Echo) {
 
 // createPayment creates a payment.
 func createPayment(ctx echo.Context) error {
+	var (
+		err error
+		p   models.Payment
+	)
 	// Grab the Payment object details from the request's body and validate it.
-	p := models.Payment{}
 	if err := ctx.Bind(&p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 	if err := p.Validate(); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
-	return ctx.String(http.StatusNotImplemented, "")
+	p, err = ctx.Get(constants.DatabaseContextKey).(db.Database).Payments().CreatePayment(p)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return ctx.JSON(http.StatusCreated, p)
 }
 
 // deletePayment deletes a payment by ID.

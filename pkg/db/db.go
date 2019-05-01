@@ -29,6 +29,8 @@ import (
 type Database interface {
 	// IsOnline returns a value indicating whether the database is online.
 	IsOnline() bool
+	// Payments allows for accessing methods used to perform CRUD operations on payments.
+	Payments() PaymentsDatabase
 }
 
 // mongodbDatabase is an implementation of Database powered by MongoDB.
@@ -56,4 +58,11 @@ func (m *mongodbDatabase) IsOnline() bool {
 	defer fn()
 	err := m.db.Client().Ping(ctx, readpref.Primary())
 	return err == nil
+}
+
+// Payments allows for accessing methods used to perform CRUD operations on payments.
+func (m *mongodbDatabase) Payments() PaymentsDatabase {
+	return &mongodbPaymentsDatabase{
+		c: m.db.Collection("payments"),
+	}
 }

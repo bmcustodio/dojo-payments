@@ -85,70 +85,86 @@ var _ = Describe("API Server", func() {
 
 			})
 
-			DescribeTable(`returns "400 BAD REQUEST" and a meaningful error message`,
+			Context("that is invalid", func() {
+				DescribeTable(`returns "400 BAD REQUEST" and a meaningful error message`,
 
-				// The following function represents the test itself, which will be executed for each test case.
+					// The following function represents the test itself, which will be executed for each test case.
 
-				func(fn func(*models.Payment), expectedErrorMessage string) {
-					// Apply the transformation function to the base payment object in order to make it invalid.
-					fn(&payment)
-					// Attempt to create the payment and make sure that "400 BAD REQUEST" is returned.
-					res, err := request.Post(baseUrl+payments.BasePath, request.BodyJSON(payment))
+					func(fn func(*models.Payment), expectedErrorMessage string) {
+						// Apply the transformation function to the base payment object in order to make it invalid.
+						fn(&payment)
+						// Attempt to create the payment and make sure that "400 BAD REQUEST" is returned.
+						res, err := request.Post(baseUrl+payments.BasePath, request.BodyJSON(payment))
+						Expect(err).NotTo(HaveOccurred())
+						Expect(res.Response().StatusCode).To(Equal(http.StatusBadRequest))
+						// Make sure that the expected error message was returned.
+						resBody := echo.HTTPError{}
+						err = res.ToJSON(&resBody)
+						Expect(err).NotTo(HaveOccurred())
+						Expect(resBody.Message).To(Equal(expectedErrorMessage))
+					},
+
+					// The following entries represent the test cases.
+
+					Entry("when the beneficiary's account number is empty", func(p *models.Payment) {
+						p.Beneficiary.AccountNumber = ""
+					}, "beneficiary: the entity's account number must not be empty"),
+
+					Entry("when the beneficiary's bank id is empty", func(p *models.Payment) {
+						p.Beneficiary.BankID = ""
+					}, "beneficiary: the entity's bank id must not be empty"),
+
+					Entry("when the beneficiary's name is empty", func(p *models.Payment) {
+						p.Beneficiary.Name = ""
+					}, "beneficiary: the entity's name must not be empty"),
+
+					Entry("when the debtors's account number is empty", func(p *models.Payment) {
+						p.Debtor.AccountNumber = ""
+					}, "debtor: the entity's account number must not be empty"),
+
+					Entry("when the debtors's bank id is empty", func(p *models.Payment) {
+						p.Debtor.BankID = ""
+					}, "debtor: the entity's bank id must not be empty"),
+
+					Entry("when the debtor's name is empty", func(p *models.Payment) {
+						p.Debtor.Name = ""
+					}, "debtor: the entity's name must not be empty"),
+
+					Entry("when the amount is negative", func(p *models.Payment) {
+						p.Amount = -1.34
+					}, "the amount must be positive"),
+
+					Entry("when the amount is empty", func(p *models.Payment) {
+						p.Amount = 0
+					}, "the amount must be positive"),
+
+					Entry("when the currency is empty", func(p *models.Payment) {
+						p.Currency = ""
+					}, "the currency must not be empty"),
+
+					Entry("when the date is empty", func(p *models.Payment) {
+						p.Date = time.Time{}
+					}, "the date must not be empty"),
+
+					Entry("when the description is empty", func(p *models.Payment) {
+						p.Description = ""
+					}, "the description must not be empty"),
+				)
+			})
+
+			Context("that is valid", func() {
+				JustBeforeEach(func() {
+					req, err := request.Post(baseUrl+payments.BasePath, request.BodyJSON(payment))
 					Expect(err).NotTo(HaveOccurred())
-					Expect(res.Response().StatusCode).To(Equal(http.StatusBadRequest))
-					// Make sure that the expected error message was returned.
-					resBody := echo.HTTPError{}
-					err = res.ToJSON(&resBody)
+					Expect(req.Response().StatusCode).To(Equal(http.StatusCreated))
+					err = req.ToJSON(&payment)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(resBody.Message).To(Equal(expectedErrorMessage))
-				},
+				})
 
-				// The following entries represent the test cases.
-
-				Entry("when the beneficiary's account number is empty", func(p *models.Payment) {
-					p.Beneficiary.AccountNumber = ""
-				}, "beneficiary: the entity's account number must not be empty"),
-
-				Entry("when the beneficiary's bank id is empty", func(p *models.Payment) {
-					p.Beneficiary.BankID = ""
-				}, "beneficiary: the entity's bank id must not be empty"),
-
-				Entry("when the beneficiary's name is empty", func(p *models.Payment) {
-					p.Beneficiary.Name = ""
-				}, "beneficiary: the entity's name must not be empty"),
-
-				Entry("when the debtors's account number is empty", func(p *models.Payment) {
-					p.Debtor.AccountNumber = ""
-				}, "debtor: the entity's account number must not be empty"),
-
-				Entry("when the debtors's bank id is empty", func(p *models.Payment) {
-					p.Debtor.BankID = ""
-				}, "debtor: the entity's bank id must not be empty"),
-
-				Entry("when the debtor's name is empty", func(p *models.Payment) {
-					p.Debtor.Name = ""
-				}, "debtor: the entity's name must not be empty"),
-
-				Entry("when the amount is negative", func(p *models.Payment) {
-					p.Amount = -1.34
-				}, "the amount must be positive"),
-
-				Entry("when the amount is empty", func(p *models.Payment) {
-					p.Amount = 0
-				}, "the amount must be positive"),
-
-				Entry("when the currency is empty", func(p *models.Payment) {
-					p.Currency = ""
-				}, "the currency must not be empty"),
-
-				Entry("when the date is empty", func(p *models.Payment) {
-					p.Date = time.Time{}
-				}, "the date must not be empty"),
-
-				Entry("when the description is empty", func(p *models.Payment) {
-					p.Description = ""
-				}, "the description must not be empty"),
-			)
+				It("returns the payment's ID in the response body", func() {
+					Expect(payment.ID).NotTo(BeEmpty())
+				})
+			})
 		})
 	})
 })
