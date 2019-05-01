@@ -16,11 +16,27 @@ package server
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	log "github.com/sirupsen/logrus"
 )
+
+const (
+	// DatabaseStatusOffline indicates that the database cannot be reached.
+	DatabaseStatusOffline = "OFFLINE"
+	// DatabaseStatusOnline indicates that the database can be reached.
+	DatabaseStatusOnline = "ONLINE"
+)
+
+// APIServerRootResponse represents a response returned by the root handler.
+type APIServerRootResponse struct {
+	// DatabaseStatus is the current status of the database.
+	DatabaseStatus string `json:"database_status"`
+	// Timestamp is the current timestamp.
+	Timestamp time.Time `json:"time"`
+}
 
 // APIServer serves APIs such as the Payments API.
 type APIServer struct {
@@ -36,7 +52,10 @@ func NewAPIServer() *APIServer {
 	}
 	// Register the root handler.
 	s.echo.Add(http.MethodGet, "/", func(ctx echo.Context) error {
-		return ctx.String(http.StatusOK, "")
+		return ctx.JSON(http.StatusOK, APIServerRootResponse{
+			DatabaseStatus: DatabaseStatusOffline,
+			Timestamp:      time.Now(),
+		})
 	})
 	// Disable Echo's banner.
 	s.echo.HideBanner = true
