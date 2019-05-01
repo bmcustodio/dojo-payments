@@ -43,20 +43,19 @@ var _ = Describe("API Server", func() {
 			res *request.Resp
 		)
 
-		JustBeforeEach(func() {
-			// Make a "GET /" request.
+		BeforeEach(func() {
+			// Make a "GET /" request and make sure no errors have occurred.
 			res, err = request.Get(baseUrl)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It(`returns "200 OK"`, func() {
-			// Make sure that no errors have occurred, and that "200 OK" was returned.
-			Expect(err).NotTo(HaveOccurred())
+			// Make sure that a "200 OK" response was returned.
 			Expect(res.Response().StatusCode).To(Equal(http.StatusOK))
 		})
 
 		It("returns a value indicating that the database is online", func() {
-			// Make sure that no errors have occurred, and that there is a key indicating that the database is online.
-			Expect(err).NotTo(HaveOccurred())
+			// Make sure that there is a key on the response's body indicating that the database is online.
 			body := server.APIServerRootResponse{}
 			err = res.ToJSON(&body)
 			Expect(err).NotTo(HaveOccurred())
@@ -65,12 +64,12 @@ var _ = Describe("API Server", func() {
 	})
 
 	Context("serving the Payments API", func() {
-		When(`receiving a request for creating a payment`, func() {
+		When(`receiving a "POST /payments" request`, func() {
 			var (
 				payment models.Payment
 			)
 
-			JustBeforeEach(func() {
+			BeforeEach(func() {
 				// Make sure we start with a valid payment.
 				payment = models.Payment{
 					Amount:      314.15,
@@ -90,7 +89,7 @@ var _ = Describe("API Server", func() {
 				}
 			})
 
-			Context("that is invalid", func() {
+			Context("containing an invalid payment", func() {
 				DescribeTable(`returns "400 BAD REQUEST" and a meaningful error message`,
 
 					// The following function represents the test itself, which will be executed for each test case.
@@ -157,16 +156,13 @@ var _ = Describe("API Server", func() {
 				)
 			})
 
-			Context("that is valid", func() {
-				JustBeforeEach(func() {
+			Context("containing a valid payment", func() {
+				It("creates the payment and returns its ID in the response's body", func() {
 					req, err := request.Post(baseUrl+payments.BasePath, request.BodyJSON(payment))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(req.Response().StatusCode).To(Equal(http.StatusCreated))
 					err = req.ToJSON(&payment)
 					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("returns the payment's ID in the response body", func() {
 					Expect(payment.ID).NotTo(BeEmpty())
 				})
 			})
@@ -178,7 +174,7 @@ var _ = Describe("API Server", func() {
 				payment2 models.Payment
 			)
 
-			JustBeforeEach(func() {
+			BeforeEach(func() {
 				payment1 = models.Payment{
 					Amount:      314.15,
 					Currency:    "EUR",
@@ -211,6 +207,7 @@ var _ = Describe("API Server", func() {
 						Name:          "Dave",
 					},
 				}
+
 				// Create the first payment.
 				res, err := request.Post(baseUrl+payments.BasePath, request.BodyJSON(payment1))
 				Expect(err).NotTo(HaveOccurred())
@@ -218,6 +215,7 @@ var _ = Describe("API Server", func() {
 				err = res.ToJSON(&payment1)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(payment1.ID).NotTo(BeEmpty())
+
 				// Create the second payment.
 				res, err = request.Post(baseUrl+payments.BasePath, request.BodyJSON(payment2))
 				Expect(err).NotTo(HaveOccurred())
@@ -227,56 +225,62 @@ var _ = Describe("API Server", func() {
 				Expect(payment2.ID).NotTo(BeEmpty())
 			})
 
-			It("can find a payment by its ID", func() {
-				// Try to get one of the payments by its ID and make sure the expected result is returned.
+			It("can find an existing payment by its ID", func() {
+				// Try to get one of the payments by its ID and make sure no error has been returned.
 				res, err := request.Get(baseUrl + payments.BasePath + "/" + payment1.ID.Hex())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Response().StatusCode).To(Equal(http.StatusOK))
-				p := models.Payment{}
-				err = res.ToJSON(&p)
+				// Decode the response's body and make sure the correct payment has been returned.
+				result := models.Payment{}
+				err = res.ToJSON(&result)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(p.ID.Hex()).To(Equal(payment1.ID.Hex()))
-				Expect(p.Amount).To(Equal(payment1.Amount))
-				Expect(p.Currency).To(Equal(payment1.Currency))
+				Expect(result.ID.Hex()).To(Equal(payment1.ID.Hex()))
 			})
 
-			It("lists all registered payments", func() {
-				// List all registered payments.
+			It("can list all registered payments", func() {
+				// List all registered payments and make sure no error has been returned.
 				res, err := request.Get(baseUrl + payments.BasePath)
 				Expect(err).NotTo(HaveOccurred())
-				// Make sure that both payments have been listed.
 				Expect(res.Response().StatusCode).To(Equal(http.StatusOK))
-				p := make([]models.Payment, 0)
-				err = res.ToJSON(&p)
+				// Decode the response's body and make sure that both payments have been returned.
+				result := make([]models.Payment, 0)
+				err = res.ToJSON(&result)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(p).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				Expect(result).To(ContainElement(MatchFields(IgnoreExtras, Fields{
 					paymentIDFieldName: Equal(payment1.ID),
 				})))
-				Expect(p).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				Expect(result).To(ContainElement(MatchFields(IgnoreExtras, Fields{
 					paymentIDFieldName: Equal(payment2.ID),
 				})))
 			})
 
 			It("can delete a payment by its ID and does not further list it", func() {
-				// Delete the first payment.
+				// Delete the first payment and make sure no error has been returned.
 				res, err := request.Delete(baseUrl + payments.BasePath + "/" + payment1.ID.Hex())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Response().StatusCode).To(Equal(http.StatusNoContent))
+
 				// Make sure that the first payment can no longer be retrieved by its ID.
 				res, err = request.Get(baseUrl + payments.BasePath + "/" + payment1.ID.Hex())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Response().StatusCode).To(Equal(http.StatusNotFound))
+
+				// Make sure that the second payment can still be retrieved by its ID.
+				res, err = request.Get(baseUrl + payments.BasePath + "/" + payment2.ID.Hex())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(res.Response().StatusCode).To(Equal(http.StatusOK))
+
 				// Make sure that the first payment is no longer listed, but that the second one is.
 				res, err = request.Get(baseUrl + payments.BasePath)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Response().StatusCode).To(Equal(http.StatusOK))
-				p := make([]models.Payment, 0)
-				err = res.ToJSON(&p)
+				result := make([]models.Payment, 0)
+				err = res.ToJSON(&result)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(p).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
+				Expect(result).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{
 					paymentIDFieldName: Equal(payment1.ID),
 				})))
-				Expect(p).To(ContainElement(MatchFields(IgnoreExtras, Fields{
+				Expect(result).To(ContainElement(MatchFields(IgnoreExtras, Fields{
 					paymentIDFieldName: Equal(payment2.ID),
 				})))
 			})
@@ -291,11 +295,11 @@ var _ = Describe("API Server", func() {
 				res, err := request.Put(baseUrl+payments.BasePath+"/"+originalID, request.BodyJSON(payment1))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(res.Response().StatusCode).To(Equal(http.StatusOK))
-				updatedPayment := models.Payment{}
-				err = res.ToJSON(&updatedPayment)
+				result := models.Payment{}
+				err = res.ToJSON(&result)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(updatedPayment.Amount).To(Equal(payment1.Amount))
-				Expect(updatedPayment.ID.Hex()).To(Equal(originalID))
+				Expect(result.Amount).To(Equal(payment1.Amount))
+				Expect(result.ID.Hex()).To(Equal(originalID))
 			})
 		})
 	})

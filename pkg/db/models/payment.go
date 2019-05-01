@@ -50,10 +50,8 @@ func (e *Entity) Validate() error {
 type Payment struct {
 	// ID is the ID of the payments.
 	ID primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-	// CreatedAt is the record's creation date.
-	CreatedAt time.Time `bson:"created_at" json:"created_at"`
 	// UpdatedAt is the record's modification date.
-	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
+	UpdatedAt time.Time `bson:"updated_at" json:"-"`
 	// DeletedAt is the record's deletion date.
 	DeletedAt *time.Time `bson:"deleted_at" json:"-"`
 

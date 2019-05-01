@@ -44,7 +44,6 @@ func createPayment(ctx echo.Context) error {
 		err error
 		p   models.Payment
 	)
-	// Grab the Payment object details from the request's body and validate it.
 	if err := ctx.Bind(&p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -98,7 +97,6 @@ func updatePayment(ctx echo.Context) error {
 		p   models.Payment
 		r   models.Payment
 	)
-	// Grab the Payment object details from the request's body and validate it.
 	if err := ctx.Bind(&p); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}

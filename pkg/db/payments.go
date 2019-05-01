@@ -49,9 +49,8 @@ type mongodbPaymentsDatabase struct {
 
 // CreatePayment creates the provided payment.
 func (db *mongodbPaymentsDatabase) CreatePayment(p models.Payment) (models.Payment, error) {
-	// Grab the current timestamp and set the creation/modification date.
+	// Grab the current timestamp and set the modification date.
 	now := time.Now()
-	p.CreatedAt = now
 	p.UpdatedAt = now
 	// Create the payment.
 	ctx, fn := context.WithTimeout(context.Background(), constants.MongoDBOperationTimeout)
@@ -77,16 +76,7 @@ func (db *mongodbPaymentsDatabase) DeletePayment(id string) (bool, error) {
 	// Try to mark the payment as having been deleted.
 	ctx, fn := context.WithTimeout(context.Background(), constants.MongoDBOperationTimeout)
 	defer fn()
-	r, err := db.c.UpdateOne(ctx, primitive.M{
-		"_id": objectID,
-		"deleted_at": primitive.M{
-			"$eq": nil,
-		},
-	}, primitive.M{
-		"$set": primitive.M{
-			"deleted_at": now,
-		},
-	})
+	r, err := db.c.UpdateOne(ctx, existingByID(objectID), markDeleted(now))
 	if err != nil {
 		return false, fmt.Errorf("failed to delete payment with id %q: %v", id, err)
 	}
@@ -103,12 +93,7 @@ func (db *mongodbPaymentsDatabase) GetPayment(id string) (models.Payment, error)
 	// Try to retrieve the payment with the provided ID, excluding deleted payments.
 	ctx, fn := context.WithTimeout(context.Background(), constants.MongoDBOperationTimeout)
 	defer fn()
-	r := db.c.FindOne(ctx, primitive.M{
-		"_id": objectID,
-		"deleted_at": primitive.M{
-			"$eq": nil,
-		},
-	})
+	r := db.c.FindOne(ctx, existingByID(objectID))
 	if r.Err() != nil {
 		return models.Payment{}, fmt.Errorf("failed to get payment with id %q: %v", id, r.Err())
 	}
@@ -116,6 +101,7 @@ func (db *mongodbPaymentsDatabase) GetPayment(id string) (models.Payment, error)
 	p := models.Payment{}
 	if err := r.Decode(&p); err != nil {
 		if err != mongo.ErrNoDocuments {
+			// The payment might exist or not, but we've got an unexpected error which we must propagate.
 			return models.Payment{}, fmt.Errorf("failed to get payment with id %q: %v", id, err)
 		}
 		// The payment was not found, so we just return an empty payment (and error).
@@ -129,11 +115,7 @@ func (db *mongodbPaymentsDatabase) ListPayments() ([]models.Payment, error) {
 	// Try to retrieve all registered payments, excluding deleted ones.
 	ctx, fn := context.WithTimeout(context.Background(), constants.MongoDBOperationTimeout)
 	defer fn()
-	c, err := db.c.Find(ctx, primitive.M{
-		"deleted_at": primitive.M{
-			"$eq": nil,
-		},
-	})
+	c, err := db.c.Find(ctx, existing())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list payments: %v", err)
 	}
@@ -171,12 +153,7 @@ func (db *mongodbPaymentsDatabase) UpdatePayment(id string, p models.Payment) (m
 	opts.SetReturnDocument(options.After)
 	ctx, fn := context.WithTimeout(context.Background(), constants.MongoDBOperationTimeout)
 	defer fn()
-	r := db.c.FindOneAndReplace(ctx, primitive.M{
-		"_id": objectID,
-		"deleted_at": primitive.M{
-			"$eq": nil,
-		},
-	}, p, opts)
+	r := db.c.FindOneAndReplace(ctx, existingByID(objectID), p, opts)
 	if r.Err() != nil {
 		return models.Payment{}, fmt.Errorf("failed to update payment: %v", r.Err())
 	}
@@ -184,6 +161,7 @@ func (db *mongodbPaymentsDatabase) UpdatePayment(id string, p models.Payment) (m
 	res := models.Payment{}
 	if err := r.Decode(&res); err != nil {
 		if err != mongo.ErrNoDocuments {
+			// The payment might exist or not, but we've got an unexpected error which we must propagate.
 			return models.Payment{}, fmt.Errorf("failed to update payment: %v", r.Err())
 		}
 		// The payment was not found, so we just return an empty payment (and error).
