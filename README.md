@@ -1,5 +1,22 @@
 # dojo-payments
 
+## Running
+
+To run the API server, you may run
+
+```shell
+$ make run
+```
+
+This command starts the API server at `http://localhost:8080`.
+In case you want the API server to serve requests at a different host or port, you must instead run
+
+```shell
+$ make run BIND_ADDR="<host>:<port>"
+```
+
+replacing `<host>` and `<port>` with the desired host and port.
+
 ## Testing
 
 In order to run the end-to-end test suite, you may run
@@ -14,7 +31,7 @@ In case the API server is not serving requests at `http://localhost:8080`, you m
 $ make test.e2e BASE_URL="http://<host>:<port>"
 ```
 
-replacing `<host>` and `<port>` with the host and port where the API server can be reached.
+replacing `<host>` and `<port>` with the host and port where the API server can be reached.         
 
 ## License
 
