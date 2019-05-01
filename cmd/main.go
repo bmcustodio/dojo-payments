@@ -19,24 +19,37 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bmcstdio/dojo-payments/pkg/db"
 	"github.com/bmcstdio/dojo-payments/pkg/server"
 )
 
 var (
 	// bindAddr is the "host:port" combination at which to serve the API server.
 	bindAddr string
+	// mongodbDatabase is the name of the MongoDB database to use for storage.
+	mongodbDatabase string
+	// mongodbUrl is the URL at which MongoDB can be reached.
+	mongodbURL string
 )
 
 func init() {
 	flag.StringVar(&bindAddr, "bind-addr", ":8080", `the "host:port" combination at which to serve the api server`)
+	flag.StringVar(&mongodbDatabase, "mongodb-database", "dojo-payments", "the name of the mongodb database to use for storage")
+	flag.StringVar(&mongodbURL, "mongodb-url", "mongodb://localhost:27017", "the url at which mongodb can be reached")
 }
 
 func main() {
 	// Parse the provided command-line flags.
 	flag.Parse()
 
-	// Initialize and run the API server.
-	srv := server.NewAPIServer()
+	// Initialize the the database.
+	database, err := db.NewMongoDDatabase(mongodbURL, mongodbDatabase)
+	if err != nil {
+		log.Fatalf("failed to initialize the database: %v", err)
+	}
+
+	// Initialize and run the API server using this database for storage.
+	srv := server.NewAPIServer(database)
 	if err := srv.Run(bindAddr); err != nil {
 		log.Fatalf("failed to run the api server: %v", err)
 	}

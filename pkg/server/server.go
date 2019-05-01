@@ -21,6 +21,9 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/bmcstdio/dojo-payments/pkg/constants"
+	"github.com/bmcstdio/dojo-payments/pkg/db"
 )
 
 const (
@@ -44,16 +47,24 @@ type APIServer struct {
 	echo *echo.Echo
 }
 
-// NewAPIServer returns a new instance of the API server
-func NewAPIServer() *APIServer {
+// NewAPIServer returns a new instance of the API server that uses the specified database for storage.
+func NewAPIServer(database db.Database) *APIServer {
 	// Create a new instance of the API server.
 	s := &APIServer{
 		echo: echo.New(),
 	}
 	// Register the root handler.
 	s.echo.Add(http.MethodGet, "/", func(ctx echo.Context) error {
+		var (
+			status string
+		)
+		if ctx.Get(constants.DatabaseContextKey).(db.Database).IsOnline() {
+			status = DatabaseStatusOnline
+		} else {
+			status = DatabaseStatusOffline
+		}
 		return ctx.JSON(http.StatusOK, APIServerRootResponse{
-			DatabaseStatus: DatabaseStatusOffline,
+			DatabaseStatus: status,
 			Timestamp:      time.Now(),
 		})
 	})
@@ -65,6 +76,13 @@ func NewAPIServer() *APIServer {
 	s.echo.Use(middleware.Logger())
 	// Assign an ID to each HTTP request.
 	s.echo.Use(middleware.RequestID())
+	// Add the database to the context so that HTTP handlers can use it to actually store data.
+	s.echo.Use(func(fn echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			ctx.Set(constants.DatabaseContextKey, database)
+			return fn(ctx)
+		}
+	})
 	// Return the instance of the API server to the caller.
 	return s
 }

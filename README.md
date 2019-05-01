@@ -2,7 +2,15 @@
 
 ## Running
 
-To run the API server, you may run
+The API server requires access to a MongoDB database in order to store data.
+By default, it tries to connect to MongoDB at `mongodb://localhost:27017`, and to use a database called `dojo-payments`.
+The easiest way to get a compatible MongoDB setup for testing purposes is to use Docker:
+
+```shell
+$ docker run --detach --name dojo-payments-mongodb --publish 27017:27017 mongo:4.0.9
+```  
+
+To run the API server, you may then run
 
 ```shell
 $ make run
@@ -16,6 +24,13 @@ $ make run BIND_ADDR="<host>:<port>"
 ```
 
 replacing `<host>` and `<port>` with the desired host and port.
+Likewise, in case you want the API server to connect to MongoDB at a different URL or to use a different database, you must instead run
+
+```shell
+$ make run MONGODB_URL="<mongodb-url>" MONGODB_DATABASE="<mongodb-database>"
+```
+
+replacing `<mongodb-url>` and `<mongodb-database>` with the desired values.
 
 ## Testing
 

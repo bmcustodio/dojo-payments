@@ -42,7 +42,7 @@ var _ = Describe("API Server", func() {
 			Expect(res.Response().StatusCode).To(Equal(http.StatusOK))
 		})
 
-		It("returns a value indicating whether the database is online", func() {
+		It("returns a value indicating that the database is online", func() {
 			// Make sure that no errors have occurred, and that there is a key indicating that the database is online.
 			Expect(err).NotTo(HaveOccurred())
 			body := server.APIServerRootResponse{}
