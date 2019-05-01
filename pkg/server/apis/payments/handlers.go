@@ -60,17 +60,35 @@ func createPayment(ctx echo.Context) error {
 
 // deletePayment deletes a payment by ID.
 func deletePayment(ctx echo.Context) error {
-	return ctx.String(http.StatusNotImplemented, "")
+	d, err := ctx.Get(constants.DatabaseContextKey).(db.Database).Payments().DeletePayment(ctx.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	if !d {
+		return echo.NewHTTPError(http.StatusNotFound, "payment not found")
+	}
+	return ctx.String(http.StatusNoContent, "")
 }
 
 // getPayment gets a payment by ID.
 func getPayment(ctx echo.Context) error {
-	return ctx.String(http.StatusNotImplemented, "")
+	p, err := ctx.Get(constants.DatabaseContextKey).(db.Database).Payments().GetPayment(ctx.Param("id"))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	if p == (models.Payment{}) {
+		return echo.NewHTTPError(http.StatusNotFound, "payment not found")
+	}
+	return ctx.JSON(http.StatusOK, p)
 }
 
 // listPayments lists payments.
 func listPayments(ctx echo.Context) error {
-	return ctx.String(http.StatusNotImplemented, "")
+	r, err := ctx.Get(constants.DatabaseContextKey).(db.Database).Payments().ListPayments()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	return ctx.JSON(http.StatusOK, r)
 }
 
 // updatePayment updates a payment by ID.
