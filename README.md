@@ -48,6 +48,82 @@ $ make test.e2e BASE_URL="http://<host>:<port>"
 
 replacing `<host>` and `<port>` with the host and port where the API server can be reached.         
 
+## Payments API
+
+### Creating a payment
+
+To create a payment, you may run
+
+```shell
+$ curl -X POST http://localhost:8080/payments \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "beneficiary": {
+          "account_number": "1234",
+          "bank_id": "4321",
+          "name": "John"
+         },
+        "debtor": {
+          "account_number": "5678",
+          "bank_id": "8765",
+          "name": "Dave"
+        },
+        "amount": 314.15,
+        "currency": "EUR",
+        "date": "2019-04-30T22:30:00Z",
+        "description": "Order #1"
+      }'
+```
+
+### Listing payments
+
+To list all payments, you may run
+
+```shell
+$ curl -X GET http://localhost:8080/payments
+```
+
+### Getting a payment by ID
+
+To get a payment by its ID (e.g. `5cc9ba4ee3e758d97d491b6a`), you may run
+
+```shell
+$ curl -X GET http://localhost:8080/payments/5cc9ba4ee3e758d97d491b6a
+```
+
+### Updating a payment by ID
+
+To update a payment by its ID (e.g. `5cc9ba4ee3e758d97d491b6a`), you may run
+
+```shell
+$ curl -X PUT http://localhost:8080/payments/5cc9ba4ee3e758d97d491b6a \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "beneficiary": {
+          "account_number": "1234",
+          "bank_id": "4321",
+          "name": "John"
+        },
+        "debtor": {
+          "account_number": "5678",
+          "bank_id": "8765",
+          "name": "Dave"
+        },
+        "amount": 314.15,
+        "currency": "USD",
+        "date": "2019-04-30T22:30:00Z",
+        "description": "Order #1 (Fixed)"
+      }'
+```
+
+### Deleting a payment by ID
+
+To delete a payment by its ID (e.g. `5cc9ba4ee3e758d97d491b6a`), you may run
+
+```shell
+$ curl -X DELETE http://localhost:8080/payments/5cc9ba4ee3e758d97d491b6a
+```
+
 ## License
 
 Copyright 2019 Bruno Miguel Custodio
