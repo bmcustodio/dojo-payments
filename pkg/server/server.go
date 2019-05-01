@@ -24,6 +24,7 @@ import (
 
 	"github.com/bmcstdio/dojo-payments/pkg/constants"
 	"github.com/bmcstdio/dojo-payments/pkg/db"
+	"github.com/bmcstdio/dojo-payments/pkg/server/apis/payments"
 )
 
 const (
@@ -83,6 +84,8 @@ func NewAPIServer(database db.Database) *APIServer {
 			return fn(ctx)
 		}
 	})
+	// Register the Payments API.
+	payments.Register(s.echo)
 	// Return the instance of the API server to the caller.
 	return s
 }

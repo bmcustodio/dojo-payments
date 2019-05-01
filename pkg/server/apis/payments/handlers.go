@@ -14,7 +14,57 @@
 
 package payments
 
+import (
+	"net/http"
+
+	"github.com/labstack/echo"
+
+	"github.com/bmcstdio/dojo-payments/pkg/db/models"
+)
+
 const (
 	// BasePath is the base path of the Payments API.
 	BasePath = "/payments"
 )
+
+// Register registers the handlers for the Payments API to the provided Echo instance.
+func Register(echo *echo.Echo) {
+	echo.Add(http.MethodPost, BasePath, createPayment)
+	echo.Add(http.MethodDelete, BasePath+"/:id", deletePayment)
+	echo.Add(http.MethodGet, BasePath+"/:id", getPayment)
+	echo.Add(http.MethodGet, BasePath, listPayments)
+	echo.Add(http.MethodPut, BasePath+"/:id", updatePayment)
+}
+
+// createPayment creates a payment.
+func createPayment(ctx echo.Context) error {
+	// Grab the Payment object details from the request's body and validate it.
+	p := models.Payment{}
+	if err := ctx.Bind(&p); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	if err := p.Validate(); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return ctx.String(http.StatusNotImplemented, "")
+}
+
+// deletePayment deletes a payment by ID.
+func deletePayment(ctx echo.Context) error {
+	return ctx.String(http.StatusNotImplemented, "")
+}
+
+// getPayment gets a payment by ID.
+func getPayment(ctx echo.Context) error {
+	return ctx.String(http.StatusNotImplemented, "")
+}
+
+// listPayments lists payments.
+func listPayments(ctx echo.Context) error {
+	return ctx.String(http.StatusNotImplemented, "")
+}
+
+// updatePayment updates a payment by ID.
+func updatePayment(ctx echo.Context) error {
+	return ctx.String(http.StatusNotImplemented, "")
+}
